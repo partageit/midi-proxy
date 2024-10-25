@@ -1,0 +1,18 @@
+{
+  "scripts": {
+    "start": "node -r ts-node/register ./src/index.ts",
+    "start:watch": "nodemon"
+  },
+  "devDependencies": {
+    "@types/node": "^20.8.10",
+    "@types/node-osc": "^6.0.3",
+    "@types/webmidi": "^2.1.0",
+    "nodemon": "^3.1.7",
+    "ts-node": "^10.9.2"
+  },
+  "dependencies": {
+    "launch-control-xl": "^1.1.0",
+    "node-osc": "^9.1.4",
+    "webmidi": "^3.1.11"
+  }
+}
