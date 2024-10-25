@@ -19,7 +19,7 @@ function onEnabled() {
   // launchControlXl.test();
 
   const osc = new AbletonOsc().start();
-  //   osc.sendMessage('/live/test');
+  // osc.sendMessage('/live/test');
 
   const song = new Song(osc);
   new MyLaunchControlXl(launchControlXl, osc, song);

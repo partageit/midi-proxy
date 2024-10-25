@@ -81,15 +81,16 @@ export class LaunchControlXl extends TypedEventEmitter<LaunchControlXlEventTypes
       if (previousOnIndex >= this.buttons.pads.length) previousOnIndex = 0;
       if (currentColor >= this.colors.length) currentColor = 1;
 
-      this.buttonColor(this.buttons.pads[currentOnIndex++].code, this.colors[currentColor++], channel);
-      this.buttonColor(this.buttons.pads[previousOnIndex++].code, Color.off, channel);
+      this.setButtonColor(this.buttons.pads[currentOnIndex++], this.colors[currentColor++], channel);
+      this.setButtonColor(this.buttons.pads[previousOnIndex++], Color.off, channel);
     }, 2000);
 
     return this;
   }
 
-  public buttonColor(identifier: number, color: number, channel: number): this {
-    this.sendMidiMessage([147, identifier, color], channel);
+  public setButtonColor(button: Button, color: number, channel: number): this {
+    const command = button.midiType === 'controlchange' ? 179 : 147;
+    this.sendMidiMessage([command, button.code, color], channel);
     return this;
   }
 
@@ -101,25 +102,13 @@ export class LaunchControlXl extends TypedEventEmitter<LaunchControlXlEventTypes
     return this;
   }
 
-  public sendMidiSysexMessage(data: number[], channel?: number): this {
-    // this.midiOut.sendSysex(data);
-
-    const message = new MidiMessage(Uint8Array.from(data));
-    if (channel) message.channel = channel;
-    message.isSystemMessage = true;
-    this.midiOut.send(message);
-
-    return this;
-  }
-
   public resetButtons(buttons: Button[], channel: number, color: Color = Color.off): this {
     for (const button of buttons) {
-      this.buttonColor(button.code, color, channel);
+      this.setButtonColor(button, color, channel);
       button.resetCallback();
     }
     return this;
   }
-
 }
 
 export enum Color {
@@ -133,7 +122,7 @@ export enum Color {
   green = 60
 }
 
-type ButtonType = 'pad' | 'direction' | 'function' | 'rotary' | 'fader';
+type ButtonKind = 'pad' | 'direction' | 'function' | 'rotary' | 'fader';
 type ButtonCallbackMode = 'all' | 'key-press' | 'key-up';
 export type ButtonCallbackParams = {
   /** Full midi message */
@@ -158,7 +147,7 @@ class Button {
   private defaultCallbackOptions: ButtonCallbackOptions = { mode: 'all', channels: [], propagate: true };
 
   public constructor(
-    public kind: ButtonType,
+    public kind: ButtonKind,
     public code: number,
     public midiType: 'note' | 'controlchange' | 'any' = 'any'
   ) {

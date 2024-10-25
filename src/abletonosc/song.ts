@@ -6,7 +6,8 @@ type SongEventTypes = {
   'ready': []
   'clip-has-changed': [clip: Clip, trackId: number, clipId: number],
   /** new or open song */
-  'other-song': []
+  'other-song': [],
+  'is-playing': [playing: boolean]
 };
 
 export class Song extends TypedEventEmitter<SongEventTypes> {
@@ -32,10 +33,16 @@ export class Song extends TypedEventEmitter<SongEventTypes> {
   }
 
   private initialize(): this {
-    this.osc.once('/live/song/get/is_playing', (data: ArgumentType[]) => this.isPlaying = !!data[0]);
-    this.osc.sendMessage('/live/song/get/is_playing');
+    this.osc.on('/live/song/get/is_playing', (data: ArgumentType[]) => {
+      this.isPlaying = !!data[0];
+      this.emit('is-playing', this.isPlaying);
+    });
+    this.osc.sendMessage('/live/song/start_listen/is_playing');
 
-    this.osc.on('/live/startup', () => this.emit('other-song'));
+    this.osc.on('/live/startup', () => {
+      this.emit('other-song');
+      this.reset();
+    });
 
     this.osc.once('/live/song/get/num_scenes', (data: ArgumentType[]) => {
       this.scenesCount = data[0] as number;
@@ -120,7 +127,7 @@ export class Song extends TypedEventEmitter<SongEventTypes> {
       console.error('playClip: clip not found', clip);
       return;
     }
-    const address = play ? '/live/clip/fire' : '/live/clip/stop';
+    const address = play ? '/live/clip_slot/fire' : '/live/clip_slot/stop';
     this.osc.sendMessage(address, clipCoordinates.trackIndex, clipCoordinates.clipIndex);
     // return value is handled in startListeners for every tracks at once with /live/track/get/playing_slot_index
     return this;
@@ -134,6 +141,20 @@ export class Song extends TypedEventEmitter<SongEventTypes> {
   public selectTrack(trackIndex: number): this {
     this.osc.sendMessage('/live/view/set/selected_track', trackIndex);
     return this;
+  }
+
+  public play(): this {
+    this.osc.sendMessage('/live/song/start_playing');
+    return this;
+  }
+
+  public stop(): this {
+    this.osc.sendMessage('/live/song/stop_playing');
+    return this;
+  }
+
+  public togglePlaying(): this {
+    return this.isPlaying ? this.stop() : this.play();
   }
 }
 

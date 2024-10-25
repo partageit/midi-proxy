@@ -82,6 +82,6 @@ class SessionRingClips {
     public tracksCount = 8,
     public scenesCount = 1
   ) {
-    for (let i = 0; i < this.scenesCount; i++)   this.lines.push(Array(this.tracksCount));
+    for (let i = 0; i < this.scenesCount; i++) this.lines.push(Array(this.tracksCount));
   }
 }
