@@ -1,8 +1,27 @@
 # midi proxy
 
+Application en node pour personnaliser mes équipements midi, notamment mon novation launch control xl cassé, sans packaging ou configuration, pour le fun.
+
+Les personnalisations :
+
+- les faders 2 et 4 à 8 cassés sont désactivés pour ne pas envoyer du signal en continu
+- sur template user qui utilise le channel midi 4:
+  - un session ring sur la première ligne de pads, avec des couleurs, un déplacement avec les flèches haut bas gauche droite
+  - le bouton device démarre et arrête, avec indicateur lumineux
+  - le bouton solo désactive les fonctionnalités
+  - le bouton record arm mets à jour les nouvelles pistes et scènes, c'est pas encore automatique
+
 ## Prérequis
 
 dans midi loop, créer une entrée midi proxy
+
+## AbletonOSC
+
+c'est une surface virtuelle, pour communiquer avec cette application.
+
+git clone cette version : https://github.com/partageit/AbletonOSC dans `Documents/Ableton/User Library/Remote Scripts`.
+
+c'est un fork avec la gestion des session rings (le rectangle rouge pilotée par le périphérique midi).
 
 ## Configuration ableton
 
@@ -11,6 +30,7 @@ dans les réglages midi :
 | surface de contrôle | entrée     | sortie            |
 |---------------------|------------|-------------------|
 | Launch control XL   | midi proxy | Launch control XL |
+| Ableton OSC         | aucune     | aucune            |
 
 Ports d'entrée :
 
@@ -25,11 +45,4 @@ Ports de sortie :
 ## reste à faire
 
 - [ ] un moyen de mettre à jour finement l'état de song (nouveaux clips, tracks, ...)
-- [x] quand on change de mode user factory, débrancher les personnalisations
-- [x] bouton solo par exemple déclenche le mode session ring
-- [x] découper le ring en lignes de la largeur du nombre de tracks
-- [x] trouver un moyen de connaître le template n'importe quand -> on force au démarrage...
-- [x] boutons gauche droite pour le ring
-- [x] au changement de set, on perd le ring, il faut le réactiver et détecter qu'on a changé de live
-- [x] les groupes ne sont pas arrêtables/démarrables
 - [ ] le groupe n'arrête pas tout ?

@@ -123,7 +123,7 @@ export enum Color {
 }
 
 type ButtonKind = 'pad' | 'direction' | 'function' | 'rotary' | 'fader';
-type ButtonCallbackMode = 'all' | 'key-press' | 'key-up';
+type ButtonCallbackMode = 'all' | 'key-down' | 'key-up';
 export type ButtonCallbackParams = {
   /** Full midi message */
   midiMessage: MidiMessage,
@@ -131,7 +131,10 @@ export type ButtonCallbackParams = {
   /** midi code i.e. message.data[1] */
   code: number,
   /** midi value i.e. message.data[2] */
-  value: number
+  value: number,
+  eventType: ButtonEventType,
+  /** for key-up event only */
+  specialEventType: ButtonSpecialEventType
 }
 export type ButtonCallback = (params: ButtonCallbackParams) => void;
 export type ButtonCallbackOptions = {
@@ -139,9 +142,10 @@ export type ButtonCallbackOptions = {
   channels: number[],
   propagate: boolean
 };
+type ButtonEventType = 'unknown' | 'key-down' | 'key-up';
+type ButtonSpecialEventType = 'unknown' | 'long-press';
 
-
-class Button {
+export class Button {
   private callback: ButtonCallback;
   private callbackOptions: ButtonCallbackOptions;
   private defaultCallbackOptions: ButtonCallbackOptions = { mode: 'all', channels: [], propagate: true };
@@ -167,25 +171,66 @@ class Button {
   }
 
   public performCallback(midiMessage: MidiMessage): boolean {
+    const buttonPressHandler = new ButtonPressHandler();
+    const eventInfos = buttonPressHandler.getInfos(midiMessage);
     const params: ButtonCallbackParams = {
       midiMessage,
-      // mode: this.callbackMode,
       code: midiMessage.data[1],
-      value: midiMessage.data[2]
+      value: midiMessage.data[2],
+      eventType: eventInfos.eventType,
+      specialEventType: eventInfos.specialEventType
     }
-    if (this.callbackOptions.mode === 'key-press') {
-      if (midiMessage.type === 'noteoff') return;
-      if (midiMessage.type === 'controlchange' && params.value === 0) return;
+
+    if (this.callbackOptions.mode === 'key-down') {
+      if (params.eventType === 'key-up') return;
     }
     if (this.callbackOptions.mode === 'key-up') {
-      if (midiMessage.type === 'noteon') return;
-      if (midiMessage.type === 'controlchange' && params.value === 127) return;
+      if (params.eventType === 'key-down') return;
     }
     if (this.callbackOptions.channels.length) {
       if (!this.callbackOptions.channels.includes(midiMessage.channel)) return;
     }
     this.callback(params);
     return this.callbackOptions.propagate;
+  }
+}
+
+class ButtonPressHandler {
+  public static cache: { [identifier: string]: { date: Date, eventType: ButtonEventType } } = {};
+
+  private makeIdentifier(midiMessage: MidiMessage): string {
+    const type = ['noteon', 'noteoff'].includes(midiMessage.type) ? 'note' : midiMessage.type;
+    return `${midiMessage.channel}/${midiMessage.data[1]}/${type}`;
+  }
+
+  private register(identifier: string, eventType: ButtonEventType): this {
+    ButtonPressHandler.cache[identifier] = { date: new Date, eventType };
+    return this;
+  }
+
+  private getEventType(midiMessage: MidiMessage): ButtonEventType {
+    if (midiMessage.type === 'noteoff') return 'key-up';
+    if (midiMessage.type === 'noteon') return 'key-down';
+    const value = midiMessage.data[2];
+    if (midiMessage.type === 'controlchange' && value === 0) return 'key-up';
+    if (midiMessage.type === 'controlchange' && value === 127) return 'key-down';
+    return 'unknown';
+  }
+
+  public getInfos(midiMessage: MidiMessage): { eventType: ButtonEventType, specialEventType: ButtonSpecialEventType } {
+    const result: ReturnType<ButtonPressHandler['getInfos']> = { eventType: this.getEventType(midiMessage), specialEventType: 'unknown' };
+    const identifier = this.makeIdentifier(midiMessage);
+    if (result.eventType === 'key-down') this.register(identifier, result.eventType);
+    if (result.eventType !== 'key-up') return result;
+
+    const lastAction = ButtonPressHandler.cache[identifier];
+    if (!lastAction) return result;
+
+    if (lastAction.eventType === 'key-down' && Date.now() - lastAction.date.getTime() > 1000) {
+      result.specialEventType = 'long-press';
+    }
+
+    return result;
   }
 }
 
@@ -251,11 +296,11 @@ class Buttons {
   public directions = this.getList().filter(button => button.kind === 'direction');
   public functions = this.getList().filter(button => button.kind === 'function');
   public firstRowPads = this.pads.slice(0, 8);
-  public secondRowPads = this.pads.slice(8, 8);
+  public secondRowPads = this.pads.slice(8, 16);
   public rotaries = this.getList().filter(button => button.kind === 'rotary');
   public firstRowRotaries = this.rotaries.slice(0, 8);
-  public secondRowRotaries = this.rotaries.slice(8, 8);
-  public thirdRowRotaries = this.rotaries.slice(16, 8);
+  public secondRowRotaries = this.rotaries.slice(8, 16);
+  public thirdRowRotaries = this.rotaries.slice(16, 24);
   public faders = this.getList().filter(button => button.kind === 'fader');
 
   public getList(): Button[] {

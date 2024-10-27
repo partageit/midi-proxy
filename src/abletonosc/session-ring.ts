@@ -29,6 +29,13 @@ export class SessionRing extends TypedEventEmitter<SessionRingEventTypes> {
     return this;
   }
 
+  public changeSceneSize(tracksCount: number, scenesCount: number): this {
+    this.tracksCount = tracksCount;
+    this.scenesCount = scenesCount;
+    this.initialize();
+    return this;
+  }
+
   private startListeners(): this {
     this.osc.on('/live/startup', () => {
       this.trackOffset = this.sceneOffset = 0;
@@ -59,6 +66,15 @@ export class SessionRing extends TypedEventEmitter<SessionRingEventTypes> {
   public down(): this { return this.move(0, 1); }
   public left(): this { return this.move(-1, 0); }
   public right(): this { return this.move(1, 0); }
+
+  public isAt(position: 'top-most' | 'bottom-most' | 'left-most' | 'right-most', song: Song): boolean {
+    switch (position) {
+      case 'top-most': return this.sceneOffset === 0;
+      case 'bottom-most': return this.sceneOffset + this.scenesCount >= song.scenesCount;
+      case 'left-most': return this.trackOffset === 0;
+      case 'right-most': return this.trackOffset + this.tracksCount >= song.tracks.length;
+    }
+  }
 
   public getClipsFromSong(song: Song): SessionRingClips {
     const sessionRingClips = new SessionRingClips(this.tracksCount, this.scenesCount);

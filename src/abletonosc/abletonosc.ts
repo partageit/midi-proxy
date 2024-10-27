@@ -48,6 +48,12 @@ export class AbletonOsc extends EventEmitter {
 
     return this;
   }
+
+  /** reload ableton osc on ableton side, mainly to reload it after python code changes */
+  public reset(): this {
+    this.sendMessage('/live/api/reload')
+    return this;
+  }
 }
 
 /*
