@@ -8,8 +8,8 @@ Les personnalisations :
 - sur template user qui utilise le channel midi 4:
   - un session ring sur la première ligne de pads, avec des couleurs, un déplacement avec les flèches haut bas gauche droite
   - le bouton device démarre et arrête, avec indicateur lumineux
-  - le bouton solo désactive les fonctionnalités
-  - le bouton record arm mets à jour les nouvelles pistes et scènes, c'est pas encore automatique
+  - le bouton solo désactive les fonctionnalités, et passe le session ring sur 2 lignes en pressant plus longtemps 
+  - le bouton record arm mets à jour les nouvelles pistes et scènes, c'est pas encore automatique, et redémarre ableton osc en pressant plus longtemps
 
 ## Prérequis
 
@@ -45,4 +45,5 @@ Ports de sortie :
 ## reste à faire
 
 - [ ] un moyen de mettre à jour finement l'état de song (nouveaux clips, tracks, ...)
-- [ ] le groupe n'arrête pas tout ?
+- [ ] le groupe n'arrête pas tout ? un comportement un peu étrange : quand on démarre (ou arrête) une scène dans un groupe, la scène juste avant est aussi indiquée comme démarrée
+- [ ] s'il n'y a pas de clip dans le groupe, le bouton du groupe devrait être éteint

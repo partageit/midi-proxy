@@ -118,7 +118,7 @@ export class MyLaunchControlXl {
 
     const fillLine = (clips: Clip[], pads: Button[]): void => {
       // console.log('clips');
-      // console.log(clips);
+      // console.table(clips);
       for (let i = 0; i < clips.length; i++) {
         const clip = clips[i];
         const button = pads[i];

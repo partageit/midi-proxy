@@ -24,7 +24,7 @@ export class Song extends TypedEventEmitter<SongEventTypes> {
 
   public constructor(private osc: AbletonOsc) {
     super();
-    this.initialize();
+    this.initializeListeners().initialize();
   }
 
   public reset(): this {
@@ -32,17 +32,64 @@ export class Song extends TypedEventEmitter<SongEventTypes> {
     return this.initialize();
   }
 
-  private initialize(): this {
+  /** start this.osc.on(*) once here */
+  private initializeListeners(): this {
     this.osc.on('/live/song/get/is_playing', (data: ArgumentType[]) => {
       this.isPlaying = !!data[0];
       this.emit('is-playing', this.isPlaying);
     });
-    this.osc.sendMessage('/live/song/start_listen/is_playing');
 
     this.osc.on('/live/startup', () => {
       this.emit('other-song');
       this.reset();
     });
+
+    this.osc.on('/live/track/get/playing_slot_index', (data: ArgumentType[]) => {
+      this.handleClipPlayingChanges(data[0] as number, data[1] as number);
+    });
+
+    return this;
+  }
+
+  /**
+   * @param clipIndex negative value when every clips of the track are stopped
+   */
+  private handleClipPlayingChanges(trackIndex: number, clipIndex: number): this {
+    const track = this.tracks[trackIndex];
+
+    // group track is not updated directly, because an unwanted event is received for the group when starting/stopping the first track of the group
+    if (track.isGroup) return this;
+
+    const updateGroupPlayingState = (track: Track, clipIndex: number) => {
+      if (!track.parentTrackId) return;
+      const tracksInGroup = this.tracks.filter(t => t.parentTrackId === track.parentTrackId);
+      const clipsInGroup = tracksInGroup.map(t => t.clips[clipIndex]);
+      const atLeastOneClipInGroupIsPlaying = clipsInGroup.some(c => c.isPlaying);
+      const clip = this.tracks[track.parentTrackId].clips[clipIndex];
+      clip.isPlaying = atLeastOneClipInGroupIsPlaying;
+      this.emit('clip-has-changed', clip, track.parentTrackId, clipIndex);
+    };
+
+    const previousPlayingClipIndex = track.clips.findIndex(c => c.isPlaying);
+    if (previousPlayingClipIndex !== -1 && previousPlayingClipIndex !== clipIndex) {
+      const clip = track.clips[previousPlayingClipIndex];
+      clip.isPlaying = false;
+      updateGroupPlayingState(track, previousPlayingClipIndex);
+      this.emit('clip-has-changed', clip, trackIndex, previousPlayingClipIndex);
+    }
+    if (clipIndex >= 0) {
+      const clip = track.clips[clipIndex];
+      clip.isPlaying = true;
+      updateGroupPlayingState(track, clipIndex);
+      this.emit('clip-has-changed', clip, trackIndex, clipIndex);
+    }
+
+    return this;
+  }
+
+  private initialize(): this {
+    // listener is in inititializeListeners
+    this.osc.sendMessage('/live/song/start_listen/is_playing');
 
     this.osc.once('/live/song/get/num_scenes', (data: ArgumentType[]) => {
       this.scenesCount = data[0] as number;
@@ -52,21 +99,21 @@ export class Song extends TypedEventEmitter<SongEventTypes> {
     });
     this.osc.sendMessage('/live/song/get/num_scenes');
 
-    // this.osc.sendMessage('/live/view/start_listen/selected_scene');
-    // this.osc.sendMessage('/live/view/start_listen/selected_track');
-
     return this;
   }
 
   private initializeTracks(tracksCount: number): this {
     this.tracks = [];
     this.osc.once('/live/song/get/track_data', (data: ArgumentType[]) => {
-      const trackParamsCount = 3;
+      const trackParamsCount = 4;
       const clipParamsCount = 4;
 
+      let trackIndex = 0;
+      let lastGroupTrackId = 0;
       while (data.length) {
         const trackData = data.splice(0, (this.scenesCount * clipParamsCount) + trackParamsCount);
-        const track = new Track(trackData.shift() as string, trackData.shift() as number, trackData.shift() as boolean);
+        const track = new Track(trackData.shift() as string, trackData.shift() as number, trackData.shift() as boolean, trackData.shift() as boolean ? lastGroupTrackId : null);
+        if (track.isGroup) lastGroupTrackId = trackIndex;
         this.tracks.push(track);
         for (let i = 0; i < this.scenesCount; i++) {
           track.clips.push(new Clip(
@@ -77,38 +124,15 @@ export class Song extends TypedEventEmitter<SongEventTypes> {
             track.isGroup
           ));
         }
+        trackIndex++;
       }
 
       this.emit('ready');
-      this.startListeners();
+
+      // must be restarted when one track is added/removed
+      this.osc.sendMessage('/live/track/start_listen/playing_slot_index', '*');
     });
-    this.osc.sendMessage('/live/song/get/track_data', 0, tracksCount, 'track.name', 'track.color', 'track.is_foldable', 'clip.name', 'clip.color', 'clip.length', 'clip.is_playing');
-    return this;
-  }
-
-  private startListeners(): this {
-    return this.listenOnPlayingClips();
-  }
-
-  private listenOnPlayingClips(): this {
-    this.osc.on('/live/track/get/playing_slot_index', (data: ArgumentType[]) => {
-      const [trackIndex, clipIndex] = data;
-      const previousPlayingClipIndex = this.tracks[trackIndex as number].clips.findIndex(c => c.isPlaying);
-      if (previousPlayingClipIndex !== -1 && previousPlayingClipIndex !== clipIndex) {
-        const clip = this.tracks[trackIndex as number].clips[previousPlayingClipIndex];
-        clip.isPlaying = false;
-        this.emit('clip-has-changed', clip, trackIndex as number, previousPlayingClipIndex);
-      }
-      if (clipIndex as number >= 0) {
-        const clip = this.tracks[trackIndex as number].clips[clipIndex as number];
-        clip.isPlaying = true;
-        this.emit('clip-has-changed', clip, trackIndex as number, clipIndex as number);
-      }
-    });
-
-    // must be restarted when one track is added/removed
-    this.osc.sendMessage('/live/track/start_listen/playing_slot_index', '*');
-
+    this.osc.sendMessage('/live/song/get/track_data', 0, tracksCount, 'track.name', 'track.color', 'track.is_foldable', 'track.is_grouped','clip.name', 'clip.color', 'clip.length', 'clip.is_playing');
     return this;
   }
 
@@ -165,6 +189,8 @@ export class Track {
     public name: string,
     public color: number,
     public isGroup: boolean,
+    /** for grouped tracks, the parent track id */
+    public parentTrackId: number,
     public clips: Clip[] = []
   ) { }
 }
