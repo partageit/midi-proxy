@@ -2,6 +2,8 @@ import EventEmitter from 'events';
 import { ArgumentType, Client, Message, Server } from 'node-osc';
 
 export class AbletonOsc extends EventEmitter {
+  private excludedAdressesFromLogs = ['/live/song/get/beat'];
+
   private config = {
     bindAddress: '127.0.0.1',
     remotePort: 11000,
@@ -35,8 +37,8 @@ export class AbletonOsc extends EventEmitter {
     });
 
     this.server.on('message',  (message) => {
-      console.log(`Received message: ${message}`);
       const [address, ...parameters] = message;
+      if (!this.excludedAdressesFromLogs.includes(address)) console.log(`Received message: ${message}`);
       this.emit('message', address, parameters);
       this.emit(address, parameters);
       // console.log(`Message:`, message);

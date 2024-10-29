@@ -7,7 +7,9 @@ type SongEventTypes = {
   'clip-has-changed': [clip: Clip, trackId: number, clipId: number],
   /** new or open song */
   'other-song': [],
-  'is-playing': [playing: boolean]
+  'is-playing': [playing: boolean],
+  /** newBeat starts from 0 and never ends until song is stopped */
+  'beat': [newBeat: number]
 };
 
 export class Song extends TypedEventEmitter<SongEventTypes> {
@@ -46,6 +48,10 @@ export class Song extends TypedEventEmitter<SongEventTypes> {
 
     this.osc.on('/live/track/get/playing_slot_index', (data: ArgumentType[]) => {
       this.handleClipPlayingChanges(data[0] as number, data[1] as number);
+    });
+
+    this.osc.on('/live/song/get/beat', (data: ArgumentType[]) => {
+      this.emit('beat', data[0] as number);
     });
 
     return this;
@@ -88,8 +94,9 @@ export class Song extends TypedEventEmitter<SongEventTypes> {
   }
 
   private initialize(): this {
-    // listener is in inititializeListeners
+    // listeners are in inititializeListeners
     this.osc.sendMessage('/live/song/start_listen/is_playing');
+    this.osc.sendMessage('/live/song/start_listen/beat');
 
     this.osc.once('/live/song/get/num_scenes', (data: ArgumentType[]) => {
       this.scenesCount = data[0] as number;

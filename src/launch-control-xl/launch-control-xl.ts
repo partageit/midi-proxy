@@ -90,7 +90,7 @@ export class LaunchControlXl extends TypedEventEmitter<LaunchControlXlEventTypes
 
   public setButtonColor(button: Button, color: number, channel: number): this {
     const command = button.midiType === 'controlchange' ? 179 : 147;
-    this.sendMidiMessage([command, button.code, color], channel);
+    this.sendMidiMessage([command, button.colorCode, color], channel);
     return this;
   }
 
@@ -150,10 +150,14 @@ export class Button {
   private callbackOptions: ButtonCallbackOptions;
   private defaultCallbackOptions: ButtonCallbackOptions = { mode: 'all', channels: [], propagate: true };
 
+  public get colorCode(): number { return this._colorCode || this.code; };
+
   public constructor(
     public kind: ButtonKind,
     public code: number,
-    public midiType: 'note' | 'controlchange' | 'any' = 'any'
+    // midiType should be renamed as rotaries are controlchanges but colors act as notes
+    public midiType: 'note' | 'controlchange' | 'any' = 'any',
+    private _colorCode: number = null
   ) {
     this.resetCallback();
   }
@@ -259,30 +263,30 @@ class Buttons {
   public mute = new Button('function', 106, 'note');
   public solo = new Button('function', 107, 'note');
   public recordArm = new Button('function', 108, 'note');
-  public rotary1 = new Button('rotary', 13);
-  public rotary2 = new Button('rotary', 14);
-  public rotary3 = new Button('rotary', 15);
-  public rotary4 = new Button('rotary', 16);
-  public rotary5 = new Button('rotary', 17);
-  public rotary6 = new Button('rotary', 18);
-  public rotary7 = new Button('rotary', 19);
-  public rotary8 = new Button('rotary', 20);
-  public rotary9 = new Button('rotary', 29);
-  public rotary10 = new Button('rotary', 30);
-  public rotary11 = new Button('rotary', 31);
-  public rotary12 = new Button('rotary', 32);
-  public rotary13 = new Button('rotary', 33);
-  public rotary14 = new Button('rotary', 34);
-  public rotary15 = new Button('rotary', 35);
-  public rotary16 = new Button('rotary', 36);
-  public rotary17 = new Button('rotary', 49);
-  public rotary18 = new Button('rotary', 50);
-  public rotary19 = new Button('rotary', 51);
-  public rotary20 = new Button('rotary', 52);
-  public rotary21 = new Button('rotary', 53);
-  public rotary22 = new Button('rotary', 54);
-  public rotary23 = new Button('rotary', 55);
-  public rotary24 = new Button('rotary', 56);
+  public rotary1 = new Button('rotary', 13, 'any', 13);
+  public rotary2 = new Button('rotary', 14, 'any', 29);
+  public rotary3 = new Button('rotary', 15, 'any', 45);
+  public rotary4 = new Button('rotary', 16, 'any', 61);
+  public rotary5 = new Button('rotary', 17, 'any', 77);
+  public rotary6 = new Button('rotary', 18, 'any', 93);
+  public rotary7 = new Button('rotary', 19, 'any', 109);
+  public rotary8 = new Button('rotary', 20, 'any', 125);
+  public rotary9 = new Button('rotary', 29, 'any', 14);
+  public rotary10 = new Button('rotary', 30, 'any', 30);
+  public rotary11 = new Button('rotary', 31, 'any', 46);
+  public rotary12 = new Button('rotary', 32, 'any', 62);
+  public rotary13 = new Button('rotary', 33, 'any', 78);
+  public rotary14 = new Button('rotary', 34, 'any', 94);
+  public rotary15 = new Button('rotary', 35, 'any', 110);
+  public rotary16 = new Button('rotary', 36, 'any', 126);
+  public rotary17 = new Button('rotary', 49, 'any', 15);
+  public rotary18 = new Button('rotary', 50, 'any', 31);
+  public rotary19 = new Button('rotary', 51, 'any', 47);
+  public rotary20 = new Button('rotary', 52, 'any', 63);
+  public rotary21 = new Button('rotary', 53, 'any', 79);
+  public rotary22 = new Button('rotary', 54, 'any', 95);
+  public rotary23 = new Button('rotary', 55, 'any', 111);
+  public rotary24 = new Button('rotary', 56, 'any', 127);
   public fader1 = new Button('fader', 77);
   public fader2 = new Button('fader', 78);
   public fader3 = new Button('fader', 79);

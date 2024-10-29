@@ -7,6 +7,7 @@ export class MyLaunchControlXl {
   private sessionRing = new SessionRing(this.osc, 8, 1);
   private isSessionRingEnabled = true;
   private templateChannel = 4;
+  private rotariesColors: Color[] = [];
 
   public constructor(
     private launchControlXl: LaunchControlXl,
@@ -15,7 +16,8 @@ export class MyLaunchControlXl {
   ) {
     this
       .initializeTemplate()
-      .initializeSessionRing();
+      .initializeSessionRing()
+      .initializeBeatFollower();
   }
 
   private initializeTemplate(): this {
@@ -43,14 +45,28 @@ export class MyLaunchControlXl {
         .updateSessionRing();
     });
 
-    this.song.on('is-playing', (playing) => this.updatePlayingButtonColor(playing));
+    this.song.on('is-playing', (playing) => {
+      this.updatePlayingButtonColor(playing);
+      if (!playing) this.setRotariesColor();
+    });
 
+    return this;
+  }
+
+  private initializeBeatFollower(): this {
+    this.setRotariesColor();
+    this.song.on('beat', newBeat => {
+      const beat = newBeat % 16;
+      this.launchControlXl.setButtonColor(this.launchControlXl.buttons.rotaries[beat], Color.off, this.templateChannel);
+      const previousBeat = beat === 0 ? 15 : beat - 1;
+      this.launchControlXl.setButtonColor(this.launchControlXl.buttons.rotaries[previousBeat], this.rotariesColors[previousBeat], this.templateChannel);
+    });
     return this;
   }
 
   private enableSessionRing(): this {
     this.isSessionRingEnabled = true;
-    this.updateDirectionButtonsColor();
+    this.updateDirectionButtonsColor().setRotariesColor();
     this.launchControlXl.resetButtons(this.launchControlXl.buttons.pads, this.templateChannel);
     const buttonOptions: Partial<ButtonCallbackOptions> = { mode: 'key-down', channels: [this.templateChannel], propagate: false };
     const buttonOptionsForLongPress = Object.assign({}, buttonOptions, { mode: 'key-up' });
@@ -103,6 +119,7 @@ export class MyLaunchControlXl {
   private updatePlayingButtonColor(playing: boolean): this {
     if (!this.isSessionRingEnabled) return this;
     this.launchControlXl.setButtonColor(this.launchControlXl.buttons.device, playing ? Color.amber : Color.off, this.templateChannel);
+    return this;
   }
 
   private updateDirectionButtonsColor(): this {
@@ -110,6 +127,20 @@ export class MyLaunchControlXl {
     this.launchControlXl.setButtonColor(this.launchControlXl.buttons.down, this.sessionRing.isAt('bottom-most', this.song) ? Color.off : Color.darkRed, this.templateChannel);
     this.launchControlXl.setButtonColor(this.launchControlXl.buttons.left, this.sessionRing.isAt('left-most', this.song) ? Color.off : Color.darkRed, this.templateChannel);
     this.launchControlXl.setButtonColor(this.launchControlXl.buttons.right, this.sessionRing.isAt('right-most', this.song) ? Color.off : Color.darkRed, this.templateChannel);
+    return this;
+  }
+
+  private setRotariesColor(): this {
+    if (!this.rotariesColors.length) {
+      const baseColors = [Color.red, Color.yellow, Color.green, Color.amber];
+      for (let i = 0; i < this.launchControlXl.buttons.rotaries.length; i++) {
+        this.rotariesColors[i] = baseColors[i % 4];
+      }
+    }
+    for (let i = 0; i < this.rotariesColors.length; i++) {
+      this.launchControlXl.setButtonColor(this.launchControlXl.buttons.rotaries[i], this.rotariesColors[i], this.templateChannel);
+    }
+
     return this;
   }
 
