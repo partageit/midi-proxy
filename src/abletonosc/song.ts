@@ -139,7 +139,7 @@ export class Song extends TypedEventEmitter<SongEventTypes> {
       // must be restarted when one track is added/removed
       this.osc.sendMessage('/live/track/start_listen/playing_slot_index', '*');
     });
-    this.osc.sendMessage('/live/song/get/track_data', 0, tracksCount, 'track.name', 'track.color', 'track.is_foldable', 'track.is_grouped','clip.name', 'clip.color', 'clip.length', 'clip.is_playing');
+    this.osc.sendMessage('/live/song/get/track_data', 0, tracksCount, 'track.name', 'track.color', 'track.is_foldable', 'track.is_grouped', 'clip.name', 'clip.color', 'clip.length', 'clip.is_playing');
     return this;
   }
 
@@ -161,6 +161,27 @@ export class Song extends TypedEventEmitter<SongEventTypes> {
     const address = play ? '/live/clip_slot/fire' : '/live/clip_slot/stop';
     this.osc.sendMessage(address, clipCoordinates.trackIndex, clipCoordinates.clipIndex);
     // return value is handled in startListeners for every tracks at once with /live/track/get/playing_slot_index
+    return this;
+  }
+
+  public stopTrack(params: { track?: Track, clip?: Clip, trackIndex?: number }): this {
+    let trackIndex: number = null;
+    if (params.trackIndex) trackIndex = params.trackIndex;
+    if (params.clip) {
+      const clipCoordinates = this.findClip(params.clip);
+      if (clipCoordinates) trackIndex = clipCoordinates.trackIndex;
+    }
+    if (params.track) {
+      const index = this.tracks.findIndex(t => t === params.track);
+      if (index !== -1) trackIndex = index;
+    }
+
+    if (trackIndex === null) {
+      console.error('stopTrack: track not found', params);
+      return this;
+    }
+
+    this.osc.sendMessage('/live/track/stop_all_clips', trackIndex);
     return this;
   }
 

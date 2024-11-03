@@ -161,7 +161,10 @@ export class MyLaunchControlXl {
           }, { mode: 'key-down', channels: [this.templateChannel], propagate: false });
         } else {
           this.launchControlXl.setButtonColor(button, Color.off, this.templateChannel);
-          button.setCallback(() => { }, { propagate: false });
+          button.setCallback(() => {
+            this.song.stopTrack({ clip });
+            this.launchControlXl.setButtonColor(button, Color.yellow, this.templateChannel);
+          }, { mode: 'key-down', channels: [this.templateChannel], propagate: false });
         }
       }
     }
