@@ -123,6 +123,7 @@ export class Song extends TypedEventEmitter<SongEventTypes> {
         if (track.isGroup) lastGroupTrackId = trackIndex;
         this.tracks.push(track);
         for (let i = 0; i < this.scenesCount; i++) {
+          const clipIsEmpty = trackData[i] === null;
           track.clips.push(new Clip(
             trackData[i] as string,
             trackData[i + this.scenesCount * 1] as number,
@@ -130,6 +131,7 @@ export class Song extends TypedEventEmitter<SongEventTypes> {
             !!(trackData[i + this.scenesCount * 3]),
             track.isGroup
           ));
+          if (track.parentTrackId && !clipIsEmpty) this.tracks[lastGroupTrackId].clips[i].groupHasClip = true;
         }
         trackIndex++;
       }
@@ -224,8 +226,9 @@ export class Track {
 }
 
 export class Clip {
+  public groupHasClip = false;
   public get hexaColor(): string { return '#' + this.color.toString(16).padStart(6, '0'); };
-  public get isSet(): boolean { return this.isGroup || this.name !== null; };
+  public get isSet(): boolean { return (this.isGroup && this.groupHasClip) || this.name !== null; };
 
   public constructor(
     public name: string,
