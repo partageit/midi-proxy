@@ -60,6 +60,12 @@ export class MyLaunchControlXl {
       this.launchControlXl.setButtonColor(this.launchControlXl.buttons.rotaries[beat], Color.off, this.templateChannel);
       const previousBeat = beat === 0 ? 15 : beat - 1;
       this.launchControlXl.setButtonColor(this.launchControlXl.buttons.rotaries[previousBeat], this.rotariesColors[previousBeat], this.templateChannel);
+
+      const bar = Math.floor(newBeat / 4) % 8;
+      this.launchControlXl.setButtonColor(this.launchControlXl.buttons.rotaries[bar + 16], Color.off, this.templateChannel);
+      const previousBar = bar === 0 ? 7 : bar - 1;
+      this.launchControlXl.setButtonColor(this.launchControlXl.buttons.rotaries[previousBar + 16], this.rotariesColors[previousBar + 16], this.templateChannel);
+
     });
     return this;
   }
