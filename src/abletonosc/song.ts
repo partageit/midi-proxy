@@ -67,7 +67,7 @@ export class Song extends TypedEventEmitter<SongEventTypes> {
     if (track.isGroup) return this;
 
     const updateGroupPlayingState = (track: Track, clipIndex: number) => {
-      if (!track.parentTrackId) return;
+      if (track.parentTrackId === null) return;
       const tracksInGroup = this.tracks.filter(t => t.parentTrackId === track.parentTrackId);
       const clipsInGroup = tracksInGroup.map(t => t.clips[clipIndex]);
       const atLeastOneClipInGroupIsPlaying = clipsInGroup.some(c => c.isPlaying);
@@ -111,15 +111,19 @@ export class Song extends TypedEventEmitter<SongEventTypes> {
 
   private initializeTracks(tracksCount: number): this {
     this.tracks = [];
+    const trackParams = ['track.name', 'track.color', 'track.is_foldable', 'track.is_grouped'] as const;
+    const clipParams = ['clip.name', 'clip.color', 'clip.length', 'clip.is_playing'];
     this.osc.once('/live/song/get/track_data', (data: ArgumentType[]) => {
-      const trackParamsCount = 4;
-      const clipParamsCount = 4;
+      const trackParamsCount = trackParams.length;
+      const clipParamsCount = clipParams.length;
 
       let trackIndex = 0;
       let lastGroupTrackId = 0;
       while (data.length) {
         const trackData = data.splice(0, (this.scenesCount * clipParamsCount) + trackParamsCount);
-        const track = new Track(trackData.shift() as string, trackData.shift() as number, trackData.shift() as boolean, trackData.shift() as boolean ? lastGroupTrackId : null);
+        const params: { [k in typeof trackParams[number]]?: ArgumentType } = {};
+        for (const trackParam of trackParams) params[trackParam] = trackData.shift();
+        const track = new Track(params['track.name'] as string, params['track.color'] as number, params['track.is_foldable'] as boolean, params['track.is_grouped'] as boolean ? lastGroupTrackId : null);
         if (track.isGroup) lastGroupTrackId = trackIndex;
         this.tracks.push(track);
         for (let i = 0; i < this.scenesCount; i++) {
@@ -131,7 +135,7 @@ export class Song extends TypedEventEmitter<SongEventTypes> {
             !!(trackData[i + this.scenesCount * 3]),
             track.isGroup
           ));
-          if (track.parentTrackId && !clipIsEmpty) this.tracks[lastGroupTrackId].clips[i].groupHasClip = true;
+          if (track.parentTrackId !== null && !clipIsEmpty) this.tracks[lastGroupTrackId].clips[i].groupHasClip = true;
         }
         trackIndex++;
       }
@@ -141,7 +145,7 @@ export class Song extends TypedEventEmitter<SongEventTypes> {
       // must be restarted when one track is added/removed
       this.osc.sendMessage('/live/track/start_listen/playing_slot_index', '*');
     });
-    this.osc.sendMessage('/live/song/get/track_data', 0, tracksCount, 'track.name', 'track.color', 'track.is_foldable', 'track.is_grouped', 'clip.name', 'clip.color', 'clip.length', 'clip.is_playing');
+    this.osc.sendMessage('/live/song/get/track_data', 0, tracksCount, ...trackParams, ...clipParams);
     return this;
   }
 
